@@ -63,7 +63,7 @@ const VerifyAttestation: FC = () => {
   const isCc = Boolean(rc?.startsWith('kata-cc'));
   const hasInitData = Boolean(pod?.metadata?.annotations?.[CC_INIT_DATA_ANNOTATION]);
   const running = pod?.status?.phase === 'Running';
-  const cmd = `oc exec -it ${name ?? '<pod>'} -n ${ns ?? '<namespace>'} -- curl http://127.0.0.1:8006/cdh/resource/default/attestation-status/status`;
+  const cmd = `oc exec -it ${name ?? '<pod>'} -n ${ns ?? '<namespace>'} -- curl http://127.0.0.1:8006/cdh/resource/default/kbsres1/key1`;
 
   return (
     <>

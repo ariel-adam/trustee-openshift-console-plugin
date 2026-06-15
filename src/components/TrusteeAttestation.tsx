@@ -176,6 +176,9 @@ const ProbeDetail: FC<{
           <div className={`${PREFIX}__muted`}>
             {evidence.probe?.method}
             {evidence.probe?.cdhPath ? ` · ${evidence.probe.cdhPath}` : ''}
+            {evidence.probe?.httpStatus && evidence.probe.httpStatus !== '000'
+              ? ` · HTTP ${evidence.probe.httpStatus}`
+              : ''}
           </div>
           {decoded ? (
             <div className={`${PREFIX}__mt`}>

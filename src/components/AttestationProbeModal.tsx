@@ -120,7 +120,7 @@ const AttestationProbeModal: FC<Props> = ({ workload, kbsEndpoint, clusterName, 
   const ns = workload.namespace;
   const pod = workload.name;
 
-  const [cdhPath, setCdhPath] = useState('default/attestation-status/status');
+  const [cdhPath, setCdhPath] = useState('default/kbsres1/key1');
   const [container, setContainer] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');

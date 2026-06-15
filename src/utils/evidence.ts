@@ -25,6 +25,8 @@ export interface EvidenceRecord {
   probe?: {
     method?: string;
     cdhPath?: string;
+    /** HTTP status from the in-guest CDH fetch ("200"/"404"/"401"; "000" if unreachable). */
+    httpStatus?: string;
     execExitCode?: number;
     response?: string;
     error?: string;
