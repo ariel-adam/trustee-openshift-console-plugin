@@ -51,6 +51,7 @@ import {
   RVPS_REFERENCE_VALUES_KEY,
   RVPS_REFERENCE_VALUES_SUFFIX,
   TRUSTEE_NAMESPACE,
+  TrusteeConfigModelRef,
 } from '../k8s/resources';
 import type {
   ConfigMapKind,
@@ -290,18 +291,21 @@ const TrusteeAttestation: FC = () => {
   const kbsEndpoint = `${KBS_SERVICE_NAME}.${hubNs}:${KBS_SERVICE_PORT}`;
   const tcBase =
     primaryTc?.metadata?.namespace && primaryTc?.metadata?.name
-      ? `/k8s/ns/${primaryTc.metadata.namespace}/trusteeconfigs/${primaryTc.metadata.name}`
+      ? `/k8s/ns/${primaryTc.metadata.namespace}/${TrusteeConfigModelRef}/${primaryTc.metadata.name}`
       : undefined;
   const refValuesPath = tcBase ? `${tcBase}/reference-values` : '/trustee';
   const healthPath = tcBase ? `${tcBase}/health` : '/trustee';
   const tabLinks = { referenceValues: refValuesPath, health: healthPath };
 
-  const [cms] = useK8sWatchResource<ConfigMapKind[]>({
-    groupVersionKind: ConfigMapGVK,
-    namespace: hubNs,
-    isList: true,
-  });
-  const refPresent = useMemo(() => referenceValuesPresent(cms ?? []), [cms]);
+  // Watch the operator's RVPS ConfigMap by name — a named watch returns the full
+  // .data, whereas a ConfigMap list watch may omit it (hence false "no ref values").
+  const rvpsCmName = primaryTc?.metadata?.name
+    ? `${primaryTc.metadata.name}${RVPS_REFERENCE_VALUES_SUFFIX}`
+    : undefined;
+  const [rvpsCm] = useK8sWatchResource<ConfigMapKind>(
+    rvpsCmName ? { groupVersionKind: ConfigMapGVK, name: rvpsCmName, namespace: hubNs } : null,
+  ) as [ConfigMapKind | undefined, boolean, unknown];
+  const refPresent = useMemo(() => referenceValuesPresent(rvpsCm ? [rvpsCm] : []), [rvpsCm]);
 
   const [evidenceCms] = useK8sWatchResource<ConfigMapKind[]>({
     groupVersionKind: ConfigMapGVK,
