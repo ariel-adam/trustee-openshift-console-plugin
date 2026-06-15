@@ -82,6 +82,9 @@ export const InfrastructureGVK: K8sGroupVersionKind = {
 /** v1 Event — the attestation probe reads a pod's recent events for failure reasons. */
 export const EventGVK: K8sGroupVersionKind = { version: 'v1', kind: 'Event' };
 
+/** v1 Namespace — used to default the console's active project to the Trustee namespace. */
+export const NamespaceGVK: K8sGroupVersionKind = { version: 'v1', kind: 'Namespace' };
+
 export const ConfigMapModel: K8sModel = {
   apiVersion: 'v1',
   kind: 'ConfigMap',

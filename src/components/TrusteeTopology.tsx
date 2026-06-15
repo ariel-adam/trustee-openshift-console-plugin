@@ -19,7 +19,7 @@ import {
   Spinner,
 } from '@patternfly/react-core';
 import { LockIcon } from '@patternfly/react-icons';
-import { useKbsConfigs, useTrusteeConfigs } from '../k8s/hooks';
+import { useKbsConfigs, useTrusteeConfigs, useTrusteeDefaultProject } from '../k8s/hooks';
 import {
   InfrastructureGVK,
   KBS_SERVICE_NAME,
@@ -84,6 +84,7 @@ const LegendDot: FC<{ variant: string; label: string }> = ({ variant, label }) =
 const TrusteeTopology: FC = () => {
   const { t } = useTranslation('plugin__trustee-openshift-console-plugin');
   const navigate = useNavigate();
+  useTrusteeDefaultProject();
 
   const [trusteeConfigs, tcLoaded] = useTrusteeConfigs();
   const [kbsConfigs] = useKbsConfigs();

@@ -39,7 +39,7 @@ import {
   OutlinedQuestionCircleIcon,
   TimesCircleIcon,
 } from '@patternfly/react-icons';
-import { useKbsConfigs, useTrusteeConfigs } from '../k8s/hooks';
+import { useKbsConfigs, useTrusteeConfigs, useTrusteeDefaultProject } from '../k8s/hooks';
 import {
   ConfigMapGVK,
   EventGVK,
@@ -214,6 +214,7 @@ const ProbeDetail: FC<{
 
 const TrusteeAttestation: FC = () => {
   const { t } = useTranslation('plugin__trustee-openshift-console-plugin');
+  useTrusteeDefaultProject();
 
   const [trusteeConfigs, tcLoaded] = useTrusteeConfigs();
   const [kbsConfigs] = useKbsConfigs();

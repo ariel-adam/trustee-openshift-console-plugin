@@ -86,6 +86,9 @@ export type InfrastructureKind = K8sResourceCommon & {
   };
 };
 
+/** A v1 Namespace — we only check existence by name. */
+export type NamespaceKind = K8sResourceCommon;
+
 /** A v1 Event — the attestation probe scans reason/message for failure signatures. */
 export type EventKind = K8sResourceCommon & {
   reason?: string;
