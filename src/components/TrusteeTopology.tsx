@@ -26,9 +26,16 @@ import {
   KBS_SERVICE_PORT,
   NodeGVK,
   PodGVK,
+  RouteGVK,
   TRUSTEE_NAMESPACE,
 } from '../k8s/resources';
-import type { InfrastructureKind, NodeKind, PodKind, TrusteeConfigKind } from '../k8s/types';
+import type {
+  InfrastructureKind,
+  NodeKind,
+  PodKind,
+  RouteKind,
+  TrusteeConfigKind,
+} from '../k8s/types';
 import {
   buildTopoCluster,
   layoutTopology,
@@ -109,6 +116,20 @@ const TrusteeTopology: FC = () => {
     primaryTc?.metadata?.namespace ?? kbsConfigs[0]?.metadata?.namespace ?? TRUSTEE_NAMESPACE;
   const hubReady = isReady(primaryTc) || (kbsConfigs[0]?.status?.isReady ?? false);
   const kbsEndpoint = `${KBS_SERVICE_NAME}.${hubNs}:${KBS_SERVICE_PORT}`;
+
+  // Remote spokes can't resolve the in-cluster Service DNS — they reach the KBS
+  // over the network through its externally-exposed Route. Find the Route that
+  // targets the KBS Service in the hub namespace.
+  const [routes] = useK8sWatchResource<RouteKind[]>({
+    groupVersionKind: RouteGVK,
+    namespace: hubNs,
+    isList: true,
+  });
+  const routeHost = useMemo(() => {
+    const r = (routes ?? []).find((rt) => rt.spec?.to?.name === KBS_SERVICE_NAME);
+    return r?.spec?.host ?? r?.status?.ingress?.[0]?.host ?? '';
+  }, [routes]);
+  const remoteEndpoint = routeHost ? `https://${routeHost}` : '';
 
   const layout = useMemo(
     () => layoutTopology(buildTopoCluster(pods ?? [], nodes ?? [], infra ?? [])),
@@ -236,7 +257,7 @@ const TrusteeTopology: FC = () => {
               </Content>
               <Content component="p">
                 {t(
-                  'One Trustee can attest workloads across many clusters (hub-and-spoke). This view shows the workloads in the current cluster live; remote spoke clusters attest over the network to the same KBS endpoint shown below. Trustee and confidential containers may also run in the same cluster — then this cluster is both hub and spoke.',
+                  'One Trustee can attest workloads across many clusters (hub-and-spoke). This view shows the workloads in the current cluster live; remote spoke clusters reach this Trustee over the network through its external Route (shown below) — the in-cluster Service DNS only works for co-located workloads. Trustee and confidential containers may also run in the same cluster — then this cluster is both hub and spoke.',
                 )}
               </Content>
             </Alert>
@@ -410,14 +431,19 @@ const TrusteeTopology: FC = () => {
                   y={layout.spoke.y + 48}
                   className={`${PREFIX}__topo-subtle`}
                 >
-                  {t('Confidential workloads in other clusters attest to this Trustee at:')}
+                  {remoteEndpoint
+                    ? t('Confidential workloads in other clusters attest to this Trustee at:')
+                    : t('To attest workloads in other clusters, expose kbs-service through a Route:')}
                 </text>
                 <text
                   x={layout.spoke.x + 14}
                   y={layout.spoke.y + 70}
                   className={`${PREFIX}__topo-mono`}
                 >
-                  {kbsEndpoint}
+                  {remoteEndpoint ? truncate(remoteEndpoint, 44) : t('no external Route configured yet')}
+                  <title>
+                    {remoteEndpoint || t('No Route targets kbs-service in this namespace')}
+                  </title>
                 </text>
               </svg>
             </div>
