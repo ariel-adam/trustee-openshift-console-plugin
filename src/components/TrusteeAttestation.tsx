@@ -14,6 +14,7 @@ import {
   Button,
   Card,
   CardBody,
+  CardTitle,
   ClipboardCopy,
   Content,
   DataList,
@@ -34,6 +35,7 @@ import {
 import {
   CheckCircleIcon,
   ExclamationTriangleIcon,
+  LockIcon,
   OutlinedQuestionCircleIcon,
   TimesCircleIcon,
 } from '@patternfly/react-icons';
@@ -71,6 +73,7 @@ import {
   type AttestContext,
   type AttestWorkload,
   type Check,
+  type Verdict,
 } from '../utils/attestation';
 import { teeShort } from '../utils/topology';
 import AttestationProbeModal from './AttestationProbeModal';
@@ -105,8 +108,19 @@ const CheckRowIcon: FC<{ state: Check['state'] }> = ({ state }) => {
   return <OutlinedQuestionCircleIcon className={`${PREFIX}__icon-info`} />;
 };
 
-const StatTile: FC<{ value: number; label: string }> = ({ value, label }) => (
-  <Card isCompact className={`${PREFIX}__stat`}>
+const StatTile: FC<{ value: number; label: string; onClick?: () => void; active?: boolean }> = ({
+  value,
+  label,
+  onClick,
+  active,
+}) => (
+  <Card
+    isCompact
+    onClick={onClick}
+    className={`${PREFIX}__stat${onClick ? ` ${PREFIX}__stat--clickable` : ''}${
+      active ? ` ${PREFIX}__stat--active` : ''
+    }`}
+  >
     <CardBody>
       <div className={`${PREFIX}__stat-value`}>{value}</div>
       <div className={`${PREFIX}__stat-label`}>{label}</div>
@@ -114,11 +128,12 @@ const StatTile: FC<{ value: number; label: string }> = ({ value, label }) => (
   </Card>
 );
 
-const ProbeDetail: FC<{ w: AttestWorkload; ctx: AttestContext; onCollect: () => void }> = ({
-  w,
-  ctx,
-  onCollect,
-}) => {
+const ProbeDetail: FC<{
+  w: AttestWorkload;
+  ctx: AttestContext;
+  onCollect: () => void;
+  links: { referenceValues: string; health: string };
+}> = ({ w, ctx, onCollect, links }) => {
   const { t } = useTranslation('plugin__trustee-openshift-console-plugin');
   const [events] = useK8sWatchResource<EventKind[]>({
     groupVersionKind: EventGVK,
@@ -129,7 +144,7 @@ const ProbeDetail: FC<{ w: AttestWorkload; ctx: AttestContext; onCollect: () => 
   const probeEvents = useMemo(() => scanEvents(events ?? []), [events]);
   const blocking = hasBlockingEvent(probeEvents);
   const checks = buildChecks(w, ctx);
-  const rems = remediation(w, ctx, blocking);
+  const rems = remediation(w, ctx, blocking, links);
 
   return (
     <Grid hasGutter>
@@ -225,6 +240,13 @@ const TrusteeAttestation: FC = () => {
   const clusterName =
     (infra ?? []).find((i) => i.metadata?.name === 'cluster')?.status?.infrastructureName ?? '';
   const kbsEndpoint = `${KBS_SERVICE_NAME}.${hubNs}:${KBS_SERVICE_PORT}`;
+  const tcBase =
+    primaryTc?.metadata?.namespace && primaryTc?.metadata?.name
+      ? `/k8s/ns/${primaryTc.metadata.namespace}/trusteeconfigs/${primaryTc.metadata.name}`
+      : undefined;
+  const refValuesPath = tcBase ? `${tcBase}/reference-values` : '/trustee';
+  const healthPath = tcBase ? `${tcBase}/health` : '/trustee';
+  const tabLinks = { referenceValues: refValuesPath, health: healthPath };
 
   const [cms] = useK8sWatchResource<ConfigMapKind[]>({
     groupVersionKind: ConfigMapGVK,
@@ -262,6 +284,9 @@ const TrusteeAttestation: FC = () => {
       return next;
     });
   const [evidenceFor, setEvidenceFor] = useState<AttestWorkload | undefined>();
+  const [filter, setFilter] = useState<Verdict | 'all'>('all');
+  const toggleFilter = (v: Verdict) => setFilter((f) => (f === v ? 'all' : v));
+  const visibleRows = filter === 'all' ? rows : rows.filter((r) => r.verdict === filter);
 
   const loading = !tcLoaded || !podsLoaded || !nodesLoaded;
 
@@ -274,6 +299,25 @@ const TrusteeAttestation: FC = () => {
           <Bullseye>
             <Spinner aria-label={t('Loading')} />
           </Bullseye>
+        ) : trusteeConfigs.length === 0 ? (
+          <Card isLarge>
+            <CardTitle>
+              <LockIcon /> {t('No Trustee deployment found')}
+            </CardTitle>
+            <CardBody>
+              <p className={`${PREFIX}__mb`}>
+                {t(
+                  'Deploy Trustee to start attesting confidential workloads — one TrusteeConfig generates the KBS, policies, reference values, and secrets.',
+                )}
+              </p>
+              <Button
+                variant="primary"
+                component={(props) => <Link {...props} to="/trustee/setup" />}
+              >
+                {t('Go to Setup')}
+              </Button>
+            </CardBody>
+          </Card>
         ) : (
           <>
             {!kbsReady && (
@@ -283,7 +327,7 @@ const TrusteeAttestation: FC = () => {
                 title={t('Trustee KBS is not ready — confidential workloads cannot attest')}
                 className={`${PREFIX}__mb`}
               >
-                <Link to="/trustee">{t('Check Trustee status')}</Link>
+                <Link to={healthPath}>{t('Check Trustee health')}</Link>
               </Alert>
             )}
             {kbsReady && !refPresent && (
@@ -296,22 +340,42 @@ const TrusteeAttestation: FC = () => {
                 {t(
                   'Trustee rejects attestation until reference values (RVPS) are registered. Generate them from a TrusteeConfig, or add the PCR8 a workload’s initdata produces.',
                 )}{' '}
-                <Link to="/trustee">{t('Open Confidential Attestation')}</Link>
+                <Link to={refValuesPath}>{t('Open reference values')}</Link>
               </Alert>
             )}
 
             <Grid hasGutter className={`${PREFIX}__mb`}>
               <GridItem span={3}>
-                <StatTile value={counts.total} label={t('Confidential workloads')} />
+                <StatTile
+                  value={counts.total}
+                  label={t('Confidential workloads')}
+                  onClick={() => setFilter('all')}
+                  active={filter === 'all'}
+                />
               </GridItem>
               <GridItem span={3}>
-                <StatTile value={counts.healthy} label={t('Healthy')} />
+                <StatTile
+                  value={counts.healthy}
+                  label={t('Healthy')}
+                  onClick={() => toggleFilter('healthy')}
+                  active={filter === 'healthy'}
+                />
               </GridItem>
               <GridItem span={3}>
-                <StatTile value={counts.failing} label={t('Failing')} />
+                <StatTile
+                  value={counts.failing}
+                  label={t('Failing')}
+                  onClick={() => toggleFilter('failing')}
+                  active={filter === 'failing'}
+                />
               </GridItem>
               <GridItem span={3}>
-                <StatTile value={counts.noatt} label={t('Not attesting')} />
+                <StatTile
+                  value={counts.noatt}
+                  label={t('Not attesting')}
+                  onClick={() => toggleFilter('no-attestation')}
+                  active={filter === 'no-attestation'}
+                />
               </GridItem>
             </Grid>
 
@@ -325,9 +389,15 @@ const TrusteeAttestation: FC = () => {
                   </span>
                 </CardBody>
               </Card>
+            ) : visibleRows.length === 0 ? (
+              <Card>
+                <CardBody>
+                  <span className={`${PREFIX}__muted`}>{t('No workloads match this filter.')}</span>
+                </CardBody>
+              </Card>
             ) : (
               <DataList aria-label={t('Confidential workload attestation status')}>
-                {rows.map(({ w, verdict }) => {
+                {visibleRows.map(({ w, verdict }) => {
                   const open = expanded.has(w.uid);
                   return (
                     <DataListItem key={w.uid} isExpanded={open}>
@@ -384,7 +454,12 @@ const TrusteeAttestation: FC = () => {
                         isHidden={!open}
                       >
                         {open && (
-                          <ProbeDetail w={w} ctx={ctx} onCollect={() => setEvidenceFor(w)} />
+                          <ProbeDetail
+                            w={w}
+                            ctx={ctx}
+                            onCollect={() => setEvidenceFor(w)}
+                            links={tabLinks}
+                          />
                         )}
                       </DataListContent>
                     </DataListItem>

@@ -11,6 +11,11 @@
   box-shadow: var(--pf-t--global--box-shadow--md);
 }
 
+.trustee-openshift-console-plugin__stat--active {
+  outline: 2px solid var(--pf-t--global--icon--color--status--info--default);
+  outline-offset: -2px;
+}
+
 .trustee-openshift-console-plugin__stat-value {
   font-size: var(--pf-t--global--font--size--2xl, 1.5rem);
   font-weight: var(--pf-t--global--font--weight--body--bold, 700);

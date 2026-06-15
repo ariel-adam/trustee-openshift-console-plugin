@@ -211,6 +211,7 @@ export const remediation = (
   w: AttestWorkload,
   ctx: AttestContext,
   blockingEvent: boolean,
+  links?: { referenceValues?: string; health?: string },
 ): Remediation[] => {
   const r: Remediation[] = [];
   if (!w.hasInitData) {
@@ -228,19 +229,19 @@ export const remediation = (
   if (!ctx.kbsReady) {
     r.push({
       text: 'Trustee KBS is not ready. No workload can attest until it is — check Trustee health.',
-      href: '/trustee',
+      href: links?.health ?? '/trustee',
     });
   }
   if (!ctx.referenceValuesPresent) {
     r.push({
       text: 'Trustee has no reference values. Register this workload’s PCR8 (from the initdata builder) under Reference values.',
-      href: '/trustee',
+      href: links?.referenceValues ?? '/trustee',
     });
   }
   if (w.hasInitData && w.onTeeNode && ctx.kbsReady && (blockingEvent || w.phase !== 'Running')) {
     r.push({
       text: 'Evidence may not match Trustee’s reference values or policy. Re-register the PCR8 for this exact initdata and review the attestation policy.',
-      href: '/trustee',
+      href: links?.referenceValues ?? '/trustee',
     });
   }
   r.push({

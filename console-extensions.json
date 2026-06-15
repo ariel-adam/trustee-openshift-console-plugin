@@ -63,33 +63,22 @@
   {
     "type": "console.navigation/href",
     "properties": {
-      "id": "trustee-topology",
-      "perspective": "admin",
-      "section": "trustee",
-      "name": "%plugin__trustee-openshift-console-plugin~Topology%",
-      "href": "/trustee/topology"
-    },
-    "flags": { "required": ["TRUSTEE_TRUSTEECONFIG"] }
-  },
-  {
-    "type": "console.navigation/href",
-    "properties": {
-      "id": "trustee-attestation",
-      "perspective": "admin",
-      "section": "trustee",
-      "name": "%plugin__trustee-openshift-console-plugin~Attestation status%",
-      "href": "/trustee/attestation"
-    },
-    "flags": { "required": ["TRUSTEE_TRUSTEECONFIG"] }
-  },
-  {
-    "type": "console.navigation/href",
-    "properties": {
       "id": "trustee-deploy",
       "perspective": "admin",
       "section": "trustee",
       "name": "%plugin__trustee-openshift-console-plugin~Setup%",
       "href": "/trustee/setup"
+    },
+    "flags": { "required": ["TRUSTEE_TRUSTEECONFIG"] }
+  },
+  {
+    "type": "console.navigation/href",
+    "properties": {
+      "id": "trustee-topology",
+      "perspective": "admin",
+      "section": "trustee",
+      "name": "%plugin__trustee-openshift-console-plugin~Topology%",
+      "href": "/trustee/topology"
     },
     "flags": { "required": ["TRUSTEE_TRUSTEECONFIG"] }
   },
@@ -109,26 +98,11 @@
     "flags": { "required": ["TRUSTEE_TRUSTEECONFIG"] }
   },
   {
-    "type": "console.navigation/resource-ns",
-    "properties": {
-      "id": "trustee-kbsconfigs",
-      "perspective": "admin",
-      "section": "trustee",
-      "name": "%plugin__trustee-openshift-console-plugin~KbsConfigs%",
-      "model": {
-        "group": "confidentialcontainers.org",
-        "version": "v1alpha1",
-        "kind": "KbsConfig"
-      }
-    },
-    "flags": { "required": ["TRUSTEE_TRUSTEECONFIG"] }
-  },
-  {
     "type": "console.page/route",
     "properties": {
       "exact": true,
       "path": "/trustee",
-      "component": { "$codeRef": "TrusteeOverview" }
+      "component": { "$codeRef": "TrusteeAttestation" }
     },
     "flags": { "required": ["TRUSTEE_TRUSTEECONFIG"] }
   },
@@ -138,15 +112,6 @@
       "exact": true,
       "path": "/trustee/topology",
       "component": { "$codeRef": "TrusteeTopology" }
-    },
-    "flags": { "required": ["TRUSTEE_TRUSTEECONFIG"] }
-  },
-  {
-    "type": "console.page/route",
-    "properties": {
-      "exact": true,
-      "path": "/trustee/attestation",
-      "component": { "$codeRef": "TrusteeAttestation" }
     },
     "flags": { "required": ["TRUSTEE_TRUSTEECONFIG"] }
   },
