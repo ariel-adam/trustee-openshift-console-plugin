@@ -1,4 +1,9 @@
-import { DocumentTitle, k8sCreate, ListPageHeader } from '@openshift-console/dynamic-plugin-sdk';
+import {
+  DocumentTitle,
+  k8sCreate,
+  ListPageHeader,
+  useK8sWatchResource,
+} from '@openshift-console/dynamic-plugin-sdk';
 import {
   ActionGroup,
   Alert,
@@ -29,8 +34,14 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom-v5-compat';
 import { useTranslation } from 'react-i18next';
 import { useTrusteeConfigs } from '../k8s/hooks';
-import { TRUSTEE_NAMESPACE, TrusteeConfigModel } from '../k8s/resources';
-import type { TrusteeConfigKind } from '../k8s/types';
+import {
+  ConfigMapGVK,
+  DeploymentGVK,
+  TRUSTEE_KBS_DEPLOYMENT,
+  TRUSTEE_NAMESPACE,
+  TrusteeConfigModel,
+} from '../k8s/resources';
+import type { ConfigMapKind, DeploymentKind, TrusteeConfigKind } from '../k8s/types';
 import './trustee.css';
 
 type ProfileType = 'Permissive' | 'Restricted';
@@ -40,6 +51,33 @@ const DeployTrusteeWizard: FC = () => {
   const { t } = useTranslation('plugin__trustee-openshift-console-plugin');
   const navigate = useNavigate();
   const [existing, existingLoaded] = useTrusteeConfigs();
+
+  // Live deployment progress for the stepper below — reflects what the operator
+  // has actually reconciled, not a fixed "step 1" position.
+  const tc = existing[0];
+  const tcNs = tc?.metadata?.namespace ?? TRUSTEE_NAMESPACE;
+  const [kbsDeploy] = useK8sWatchResource<DeploymentKind>({
+    groupVersionKind: DeploymentGVK,
+    name: TRUSTEE_KBS_DEPLOYMENT,
+    namespace: tcNs,
+  });
+  const [rvpsCm] = useK8sWatchResource<ConfigMapKind>({
+    groupVersionKind: ConfigMapGVK,
+    name: tc?.metadata?.name ? `${tc.metadata.name}-rvps-reference-values` : 'rvps-reference-values',
+    namespace: tcNs,
+  });
+  const tcCreated = existing.length > 0;
+  const tcReady =
+    !!tc &&
+    (tc.status?.isReady === true ||
+      (tc.status?.conditions ?? []).some((c) => c.type === 'Ready' && c.status === 'True'));
+  const kbsUp = (kbsDeploy?.status?.readyReplicas ?? 0) > 0 || tcReady;
+  const rv = (rvpsCm?.data?.['reference-values.json'] ?? '').trim();
+  const refValuesSet = tcCreated && rv !== '' && rv !== '[]' && rv !== '{}';
+  const stepDone = [tcCreated, kbsUp, refValuesSet, false];
+  const currentStep = stepDone.findIndex((d) => !d);
+  const stepVariant = (i: number): 'success' | 'info' | 'pending' =>
+    stepDone[i] ? 'success' : i === currentStep ? 'info' : 'pending';
 
   const [name, setName] = useState('trustee-config');
   const [namespace, setNamespace] = useState(TRUSTEE_NAMESPACE);
@@ -99,7 +137,9 @@ const DeployTrusteeWizard: FC = () => {
         spec: buildSpec(),
       };
       await k8sCreate({ model: TrusteeConfigModel, data: obj });
-      navigate('/trustee');
+      // Stay on this page so the progress stepper advances as the operator
+      // reconciles KBS; the "already deployed" banner appears once the watch
+      // picks up the new TrusteeConfig.
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -109,8 +149,8 @@ const DeployTrusteeWizard: FC = () => {
 
   return (
     <>
-      <DocumentTitle>{t('Deploy Trustee')}</DocumentTitle>
-      <ListPageHeader title={t('Deploy Trustee')} />
+      <DocumentTitle>{t('Trustee setup')}</DocumentTitle>
+      <ListPageHeader title={t('Trustee setup')} />
       <PageSection>
         {existingLoaded && existing.length > 0 && (
           <Alert
@@ -143,16 +183,17 @@ const DeployTrusteeWizard: FC = () => {
               className="trustee-openshift-console-plugin__mt"
             >
               <ProgressStep
-                isCurrent
-                variant="info"
+                variant={stepVariant(0)}
+                isCurrent={currentStep === 0}
                 id="tc-flow-create"
                 titleId="tc-flow-create-title"
-                description={t('This form')}
+                description={tcCreated ? t('Created') : t('This form')}
               >
                 {t('Create TrusteeConfig')}
               </ProgressStep>
               <ProgressStep
-                variant="pending"
+                variant={stepVariant(1)}
+                isCurrent={currentStep === 1}
                 id="tc-flow-kbs"
                 titleId="tc-flow-kbs-title"
                 description={t('KBS, policies, secrets')}
@@ -160,7 +201,8 @@ const DeployTrusteeWizard: FC = () => {
                 {t('Operator deploys KBS')}
               </ProgressStep>
               <ProgressStep
-                variant="pending"
+                variant={stepVariant(2)}
+                isCurrent={currentStep === 2}
                 id="tc-flow-policy"
                 titleId="tc-flow-policy-title"
                 description={t('Expected TEE measurements')}
@@ -168,7 +210,8 @@ const DeployTrusteeWizard: FC = () => {
                 {t('Set reference values')}
               </ProgressStep>
               <ProgressStep
-                variant="pending"
+                variant={stepVariant(3)}
+                isCurrent={currentStep === 3}
                 id="tc-flow-attest"
                 titleId="tc-flow-attest-title"
                 description={t('kata-cc pods on boot')}

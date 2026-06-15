@@ -28,8 +28,8 @@ import { TrusteeConfigGVK } from '../k8s/resources';
 import type { TrusteeConfigKind } from '../k8s/types';
 import './trustee.css';
 
-// The Deploy Trustee wizard.
-const TRUSTEECONFIG_DEPLOY = '/trustee/deploy';
+// The Trustee setup (deploy) wizard.
+const TRUSTEECONFIG_DEPLOY = '/trustee/setup';
 
 const isReady = (tc: TrusteeConfigKind): boolean =>
   tc.status?.isReady === true ||

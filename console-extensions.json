@@ -44,7 +44,7 @@
     "properties": {
       "id": "trustee",
       "perspective": "admin",
-      "name": "%plugin__trustee-openshift-console-plugin~Trustee (Attestation)%"
+      "name": "%plugin__trustee-openshift-console-plugin~Confidential Attestation%"
     },
     "flags": { "required": ["TRUSTEE_TRUSTEECONFIG"] }
   },
@@ -65,8 +65,8 @@
       "id": "trustee-deploy",
       "perspective": "admin",
       "section": "trustee",
-      "name": "%plugin__trustee-openshift-console-plugin~Deploy%",
-      "href": "/trustee/deploy"
+      "name": "%plugin__trustee-openshift-console-plugin~Setup%",
+      "href": "/trustee/setup"
     },
     "flags": { "required": ["TRUSTEE_TRUSTEECONFIG"] }
   },
@@ -113,7 +113,7 @@
     "type": "console.page/route",
     "properties": {
       "exact": true,
-      "path": "/trustee/deploy",
+      "path": "/trustee/setup",
       "component": { "$codeRef": "DeployTrusteeWizard" }
     },
     "flags": { "required": ["TRUSTEE_TRUSTEECONFIG"] }
