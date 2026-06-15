@@ -111,11 +111,17 @@ const ConfigMapEditor: FC<Props> = ({
           </p>
         )}
         <p className="trustee-openshift-console-plugin__mb">
-          <ResourceLink
-            groupVersionKind={ConfigMapGVK}
-            name={configMapName}
-            namespace={namespace}
-          />
+          {/* Only link when the ConfigMap actually exists — otherwise the link
+              navigates to a non-existent resource and the console 404s. */}
+          {configMap ? (
+            <ResourceLink
+              groupVersionKind={ConfigMapGVK}
+              name={configMapName}
+              namespace={namespace}
+            />
+          ) : (
+            <span className="trustee-openshift-console-plugin__mono">{configMapName}</span>
+          )}
         </p>
         {!settled ? (
           <Spinner size="md" aria-label={t('Loading')} />

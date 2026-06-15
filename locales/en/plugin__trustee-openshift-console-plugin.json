@@ -1,5 +1,5 @@
 {
-  " resource (or the KbsConfigs nav entry). To produce image-signing keys, see ": " resource (or the KbsConfigs nav entry). To produce image-signing keys, see ",
+  " (or the KbsConfigs nav entry). To produce image-signing keys, see ": " (or the KbsConfigs nav entry). To produce image-signing keys, see ",
   " to verify the CPU TEE that hosts the confidential GPU.": " to verify the CPU TEE that hosts the confidential GPU.",
   "{{count}} KbsConfig_one": "{{count}} KbsConfig_one",
   "{{count}} KbsConfig_other": "{{count}} KbsConfig_other",
@@ -80,6 +80,7 @@
   "No cc_init_data annotation": "No cc_init_data annotation",
   "No KBS pods found. The Trustee operator may still be reconciling the KBS.": "No KBS pods found. The Trustee operator may still be reconciling the KBS.",
   "No secret resources are configured for delivery yet.": "No secret resources are configured for delivery yet.",
+  "No secrets generated yet — they appear once the operator reconciles the TrusteeConfig.": "No secrets generated yet — they appear once the operator reconciles the TrusteeConfig.",
   "No Trustee deployment found": "No Trustee deployment found",
   "No TrusteeConfig selected": "No TrusteeConfig selected",
   "Not a kata-cc workload": "Not a kata-cc workload",
@@ -165,6 +166,6 @@
   "Whether NRAS successfully verified the GPU attestation evidence.": "Whether NRAS successfully verified the GPU attestation evidence.",
   "Whether the GPU has Confidential Computing enabled.": "Whether the GPU has Confidential Computing enabled.",
   "Workloads attest & get secrets": "Workloads attest & get secrets",
-  "You can also edit the KbsConfig directly from the ": "You can also edit the KbsConfig directly from the ",
+  "You can also manage delivery from the KbsConfig": "You can also manage delivery from the KbsConfig",
   "Your GPU attestation policy should validate the claims NRAS returns:": "Your GPU attestation policy should validate the claims NRAS returns:"
 }

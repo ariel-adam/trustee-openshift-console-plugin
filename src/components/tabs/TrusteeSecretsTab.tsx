@@ -209,14 +209,29 @@ const TrusteeSecretsTab: FC<TrusteeTabProps> = ({ obj }) => {
   const namespace = obj?.metadata?.namespace ?? '';
   const [modalOpen, setModalOpen] = useState(false);
 
-  const [kbs] = useK8sWatchResource<KbsConfigKind>({
+  // The operator names generated resources from the TrusteeConfig, but the exact
+  // suffix varies by version (observed: <name>-kbs-config, <name>-auth-secret).
+  // Resolve by watching the namespace and matching the TrusteeConfig name prefix,
+  // so we only ever link to resources that actually exist (no 404 on click).
+  const [kbsList] = useK8sWatchResource<KbsConfigKind[]>({
     groupVersionKind: KbsConfigGVK,
-    name: name ? `${name}-kbsconfig` : undefined,
     namespace,
-  }) as [KbsConfigKind | undefined, boolean, unknown];
+    isList: true,
+  }) as [KbsConfigKind[] | undefined, boolean, unknown];
+  const kbs =
+    (kbsList ?? []).find((k) => k.metadata?.name === `${name}-kbs-config`) ??
+    (kbsList ?? []).find((k) => !!name && (k.metadata?.name ?? '').startsWith(`${name}`));
 
-  const generated = name ? [`${name}-kbs-auth`, `${name}-https`, `${name}-attestation-token`] : [];
+  const [secretList] = useK8sWatchResource<SecretKind[]>({
+    groupVersionKind: SecretGVK,
+    namespace,
+    isList: true,
+  }) as [SecretKind[] | undefined, boolean, unknown];
   const delivered = kbs?.spec?.kbsSecretResources ?? [];
+  const generated = (secretList ?? [])
+    .map((s) => s.metadata?.name ?? '')
+    .filter((n) => !!name && n.startsWith(`${name}-`))
+    .sort();
 
   return (
     <PageSection>
@@ -232,13 +247,21 @@ const TrusteeSecretsTab: FC<TrusteeTabProps> = ({ obj }) => {
       <Card className="trustee-openshift-console-plugin__mb">
         <CardTitle>{t('Operator-generated secrets')}</CardTitle>
         <CardBody>
-          <Flex direction={{ default: 'column' }} gap={{ default: 'gapSm' }}>
-            {generated.map((s) => (
-              <FlexItem key={s}>
-                <ResourceLink groupVersionKind={SecretGVK} name={s} namespace={namespace} />
-              </FlexItem>
-            ))}
-          </Flex>
+          {generated.length === 0 ? (
+            <span className="trustee-openshift-console-plugin__muted">
+              {t(
+                'No secrets generated yet — they appear once the operator reconciles the TrusteeConfig.',
+              )}
+            </span>
+          ) : (
+            <Flex direction={{ default: 'column' }} gap={{ default: 'gapSm' }}>
+              {generated.map((s) => (
+                <FlexItem key={s}>
+                  <ResourceLink groupVersionKind={SecretGVK} name={s} namespace={namespace} />
+                </FlexItem>
+              ))}
+            </Flex>
+          )}
         </CardBody>
       </Card>
       <Card>
@@ -275,14 +298,19 @@ const TrusteeSecretsTab: FC<TrusteeTabProps> = ({ obj }) => {
               )}
             </p>
             <p className="trustee-openshift-console-plugin__mt">
-              {t('You can also edit the KbsConfig directly from the ')}
-              <ResourceLink
-                groupVersionKind={KbsConfigGVK}
-                name={name ? `${name}-kbsconfig` : undefined}
-                namespace={namespace}
-                inline
-              />
-              {t(' resource (or the KbsConfigs nav entry). To produce image-signing keys, see ')}
+              {t('You can also manage delivery from the KbsConfig')}
+              {kbs && (
+                <>
+                  {' '}
+                  <ResourceLink
+                    groupVersionKind={KbsConfigGVK}
+                    name={kbs.metadata?.name}
+                    namespace={namespace}
+                    inline
+                  />
+                </>
+              )}
+              {t(' (or the KbsConfigs nav entry). To produce image-signing keys, see ')}
               <a href={TRUSTED_ARTIFACT_SIGNER_URL} target="_blank" rel="noopener noreferrer">
                 {t('Red Hat Trusted Artifact Signer')}
               </a>
