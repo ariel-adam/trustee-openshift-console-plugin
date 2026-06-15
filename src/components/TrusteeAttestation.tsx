@@ -11,6 +11,7 @@ import {
 import {
   Alert,
   Bullseye,
+  Button,
   Card,
   CardBody,
   ClipboardCopy,
@@ -40,13 +41,23 @@ import { useKbsConfigs, useTrusteeConfigs } from '../k8s/hooks';
 import {
   ConfigMapGVK,
   EventGVK,
+  InfrastructureGVK,
+  KBS_SERVICE_NAME,
+  KBS_SERVICE_PORT,
   NodeGVK,
   PodGVK,
   RVPS_REFERENCE_VALUES_KEY,
   RVPS_REFERENCE_VALUES_SUFFIX,
   TRUSTEE_NAMESPACE,
 } from '../k8s/resources';
-import type { ConfigMapKind, EventKind, NodeKind, PodKind, TrusteeConfigKind } from '../k8s/types';
+import type {
+  ConfigMapKind,
+  EventKind,
+  InfrastructureKind,
+  NodeKind,
+  PodKind,
+  TrusteeConfigKind,
+} from '../k8s/types';
 import {
   baselineVerdict,
   buildAttestWorkloads,
@@ -62,6 +73,7 @@ import {
   type Check,
 } from '../utils/attestation';
 import { teeShort } from '../utils/topology';
+import AttestationProbeModal from './AttestationProbeModal';
 import './trustee.css';
 
 const PREFIX = 'trustee-openshift-console-plugin';
@@ -102,7 +114,11 @@ const StatTile: FC<{ value: number; label: string }> = ({ value, label }) => (
   </Card>
 );
 
-const ProbeDetail: FC<{ w: AttestWorkload; ctx: AttestContext }> = ({ w, ctx }) => {
+const ProbeDetail: FC<{ w: AttestWorkload; ctx: AttestContext; onCollect: () => void }> = ({
+  w,
+  ctx,
+  onCollect,
+}) => {
   const { t } = useTranslation('plugin__trustee-openshift-console-plugin');
   const [events] = useK8sWatchResource<EventKind[]>({
     groupVersionKind: EventGVK,
@@ -167,6 +183,11 @@ const ProbeDetail: FC<{ w: AttestWorkload; ctx: AttestContext }> = ({ w, ctx }) 
           </div>
         ))}
         <div className={`${PREFIX}__mt`}>
+          <Button variant="secondary" onClick={onCollect}>
+            {t('Collect attestation evidence')}
+          </Button>
+        </div>
+        <div className={`${PREFIX}__mt`}>
           <Link to={`/trustee/verify/${w.namespace}/${w.name}`}>
             {t('Open guided verification')}
           </Link>
@@ -189,6 +210,10 @@ const TrusteeAttestation: FC = () => {
     groupVersionKind: NodeGVK,
     isList: true,
   });
+  const [infra] = useK8sWatchResource<InfrastructureKind[]>({
+    groupVersionKind: InfrastructureGVK,
+    isList: true,
+  });
 
   const primaryTc = useMemo(
     () => trusteeConfigs.find((tc) => isReady(tc)) ?? trusteeConfigs[0],
@@ -197,6 +222,9 @@ const TrusteeAttestation: FC = () => {
   const hubNs =
     primaryTc?.metadata?.namespace ?? kbsConfigs[0]?.metadata?.namespace ?? TRUSTEE_NAMESPACE;
   const kbsReady = isReady(primaryTc) || (kbsConfigs[0]?.status?.isReady ?? false);
+  const clusterName =
+    (infra ?? []).find((i) => i.metadata?.name === 'cluster')?.status?.infrastructureName ?? '';
+  const kbsEndpoint = `${KBS_SERVICE_NAME}.${hubNs}:${KBS_SERVICE_PORT}`;
 
   const [cms] = useK8sWatchResource<ConfigMapKind[]>({
     groupVersionKind: ConfigMapGVK,
@@ -233,6 +261,7 @@ const TrusteeAttestation: FC = () => {
       else next.add(id);
       return next;
     });
+  const [evidenceFor, setEvidenceFor] = useState<AttestWorkload | undefined>();
 
   const loading = !tcLoaded || !podsLoaded || !nodesLoaded;
 
@@ -354,7 +383,9 @@ const TrusteeAttestation: FC = () => {
                         aria-label={t('Attestation probe for {{name}}', { name: w.name })}
                         isHidden={!open}
                       >
-                        {open && <ProbeDetail w={w} ctx={ctx} />}
+                        {open && (
+                          <ProbeDetail w={w} ctx={ctx} onCollect={() => setEvidenceFor(w)} />
+                        )}
                       </DataListContent>
                     </DataListItem>
                   );
@@ -364,6 +395,14 @@ const TrusteeAttestation: FC = () => {
           </>
         )}
       </PageSection>
+      {evidenceFor && (
+        <AttestationProbeModal
+          workload={{ namespace: evidenceFor.namespace, name: evidenceFor.name }}
+          kbsEndpoint={kbsEndpoint}
+          clusterName={clusterName}
+          onClose={() => setEvidenceFor(undefined)}
+        />
+      )}
     </>
   );
 };
