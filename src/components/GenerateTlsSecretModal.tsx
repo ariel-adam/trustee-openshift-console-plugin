@@ -1,11 +1,7 @@
 import type { FC } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  k8sCreate,
-  k8sDelete,
-  useK8sWatchResource,
-} from '@openshift-console/dynamic-plugin-sdk';
+import { k8sCreate, k8sDelete, useK8sWatchResource } from '@openshift-console/dynamic-plugin-sdk';
 import {
   Alert,
   Button,
@@ -52,7 +48,12 @@ type Props = {
  * ServiceAccount token. The private key is generated inside the cluster and never
  * reaches the browser.
  */
-const buildScript = (opts: { secret: string; cn: string; san: string; namespace: string }): string => {
+const buildScript = (opts: {
+  secret: string;
+  cn: string;
+  san: string;
+  namespace: string;
+}): string => {
   const { secret, cn, san, namespace } = opts;
   return [
     'set -e',
@@ -203,12 +204,7 @@ const GenerateTlsSecretModal: FC<Props> = ({
       <ModalHeader title={t('Generate TLS secret')} />
       <ModalBody>
         <Form>
-          <Alert
-            variant="info"
-            isInline
-            title={t('How this works')}
-            className={`${PREFIX}__mb`}
-          >
+          <Alert variant="info" isInline title={t('How this works')} className={`${PREFIX}__mb`}>
             {t(
               'Runs a short in-cluster Job that generates a self-signed cert and key with openssl and stores them as a kubernetes.io/tls Secret. The private key is created inside the cluster and never reaches your browser. Substitute your own CA for production.',
             )}
@@ -250,10 +246,13 @@ const GenerateTlsSecretModal: FC<Props> = ({
               <HelperText>
                 <HelperTextItem>
                   {ingressDomain
-                    ? t('SAN: {{cn}} (in-cluster) and *.{{domain}} (covers Routes for remote spokes).', {
-                        cn: cn.trim(),
-                        domain: ingressDomain,
-                      })
+                    ? t(
+                        'SAN: {{cn}} (in-cluster) and *.{{domain}} (covers Routes for remote spokes).',
+                        {
+                          cn: cn.trim(),
+                          domain: ingressDomain,
+                        },
+                      )
                     : t('Subject and SAN of the cert. Defaults to the in-cluster KBS Service DNS.')}
                 </HelperTextItem>
               </HelperText>
@@ -283,7 +282,9 @@ const GenerateTlsSecretModal: FC<Props> = ({
             </Alert>
           )}
           <Content component="small" className={`${PREFIX}__muted`}>
-            {t('Leaves a Job and its ServiceAccount/Role/RoleBinding named {{p}} behind.', { p: P })}
+            {t('Leaves a Job and its ServiceAccount/Role/RoleBinding named {{p}} behind.', {
+              p: P,
+            })}
           </Content>
         </Form>
       </ModalBody>

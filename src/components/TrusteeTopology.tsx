@@ -19,6 +19,7 @@ import {
   Spinner,
 } from '@patternfly/react-core';
 import { LockIcon } from '@patternfly/react-icons';
+import { RemoteAttestations } from './RemoteAttestations';
 import { useKbsConfigs, useTrusteeConfigs, useTrusteeDefaultProject } from '../k8s/hooks';
 import {
   CC_INIT_DATA_ANNOTATION,
@@ -489,14 +490,18 @@ const TrusteeTopology: FC = () => {
                 >
                   {remoteEndpoint
                     ? t('Confidential workloads in other clusters attest to this Trustee at:')
-                    : t('To attest workloads in other clusters, expose kbs-service through a Route:')}
+                    : t(
+                        'To attest workloads in other clusters, expose kbs-service through a Route:',
+                      )}
                 </text>
                 <text
                   x={layout.spoke.x + 14}
                   y={layout.spoke.y + 70}
                   className={`${PREFIX}__topo-mono`}
                 >
-                  {remoteEndpoint ? truncate(remoteEndpoint, 44) : t('no external Route configured yet')}
+                  {remoteEndpoint
+                    ? truncate(remoteEndpoint, 44)
+                    : t('no external Route configured yet')}
                   <title>
                     {remoteEndpoint || t('No Route targets kbs-service in this namespace')}
                   </title>
@@ -505,6 +510,7 @@ const TrusteeTopology: FC = () => {
             </div>
           </>
         )}
+        <RemoteAttestations />
       </PageSection>
     </>
   );

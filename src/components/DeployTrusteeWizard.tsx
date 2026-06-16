@@ -69,7 +69,9 @@ const DeployTrusteeWizard: FC = () => {
   });
   const [rvpsCm] = useK8sWatchResource<ConfigMapKind>({
     groupVersionKind: ConfigMapGVK,
-    name: tc?.metadata?.name ? `${tc.metadata.name}-rvps-reference-values` : 'rvps-reference-values',
+    name: tc?.metadata?.name
+      ? `${tc.metadata.name}-rvps-reference-values`
+      : 'rvps-reference-values',
     namespace: tcNs,
   });
   const tcCreated = existing.length > 0;
