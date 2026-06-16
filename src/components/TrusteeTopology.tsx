@@ -18,9 +18,14 @@ import {
   PageSection,
   Spinner,
 } from '@patternfly/react-core';
-import { LockIcon } from '@patternfly/react-icons';
-import { RemoteAttestations } from './RemoteAttestations';
-import { useKbsConfigs, useTrusteeConfigs, useTrusteeDefaultProject } from '../k8s/hooks';
+import { LockIcon, SyncAltIcon } from '@patternfly/react-icons';
+import {
+  useKbsConfigs,
+  useRemoteAttestations,
+  useTrusteeConfigs,
+  useTrusteeDefaultProject,
+  type RemoteSpoke,
+} from '../k8s/hooks';
 import {
   CC_INIT_DATA_ANNOTATION,
   InfrastructureGVK,
@@ -44,6 +49,7 @@ import {
   decodeInitdataKbsUrl,
   isConfidentialRuntimeName,
   layoutTopology,
+  SPOKE_ROW_H,
   teeLong,
   teeShort,
   truncate,
@@ -52,6 +58,7 @@ import {
   type LaidWorkload,
   type WlStatus,
 } from '../utils/topology';
+import { relativeTime } from '../utils/evidence';
 import './trustee.css';
 
 const PREFIX = 'trustee-openshift-console-plugin';
@@ -160,9 +167,23 @@ const TrusteeTopology: FC = () => {
   }, [routes]);
   const remoteEndpoint = routeHost ? `https://${routeHost}` : '';
 
+  // Remote confidential workloads (in other clusters) that attested to this
+  // Trustee, read from the KBS log — the spoke side the console can't watch.
+  const {
+    spokes,
+    loading: spokesLoading,
+    error: spokesError,
+    fetchedAt,
+    refresh,
+  } = useRemoteAttestations(hubNs);
+
   const layout = useMemo(
-    () => layoutTopology(buildTopoCluster(pods ?? [], nodes ?? [], infra ?? [], attestByUid)),
-    [pods, nodes, infra, attestByUid],
+    () =>
+      layoutTopology(
+        buildTopoCluster(pods ?? [], nodes ?? [], infra ?? [], attestByUid),
+        spokes.length,
+      ),
+    [pods, nodes, infra, attestByUid, spokes.length],
   );
 
   const loading = !tcLoaded || !podsLoaded || !nodesLoaded;
@@ -285,6 +306,49 @@ const TrusteeTopology: FC = () => {
     );
   };
 
+  // One remote source row inside the spoke box: a confidential workload in another
+  // cluster that reached this Trustee's KBS (grouped by source IP).
+  const renderSpoke = (s: RemoteSpoke, i: number) => {
+    const sp = layout.spoke;
+    const rowTop = sp.y + sp.headerH + i * SPOKE_ROW_H;
+    const status: WlStatus = s.attestOk ? 'healthy' : s.attestDenied ? 'error' : 'pending';
+    const statusWord = s.attestOk ? t('attested') : s.attestDenied ? t('rejected') : t('attesting');
+    const statusCls = s.attestOk
+      ? `${PREFIX}__topo-attest--local`
+      : s.attestDenied
+        ? `${PREFIX}__topo-attest--none`
+        : `${PREFIX}__topo-attest--remote`;
+    const right = `${t('{{num}} secret(s) released', { num: s.released })}${
+      s.lastSeen ? ` · ${relativeTime(s.lastSeen)}` : ''
+    }`;
+    const paths = s.resources.map((r) => r.path).join(' · ');
+    return (
+      <g key={s.clientIp}>
+        <circle cx={sp.x + 16} cy={rowTop + 13} r={4} className={dotClass(status)} />
+        <text x={sp.x + 30} y={rowTop + 17} className={`${PREFIX}__topo-mono`}>
+          {s.clientIp}
+        </text>
+        <text x={sp.x + 172} y={rowTop + 17} className={statusCls}>
+          {statusWord}
+        </text>
+        <text
+          x={sp.x + sp.w - 14}
+          y={rowTop + 17}
+          textAnchor="end"
+          className={`${PREFIX}__topo-subtle`}
+        >
+          {right}
+        </text>
+        {paths && (
+          <text x={sp.x + 30} y={rowTop + 33} className={`${PREFIX}__topo-mono`}>
+            {truncate(paths, 84)}
+          </text>
+        )}
+        <title>{`${s.clientIp} — ${statusWord} · ${paths}`}</title>
+      </g>
+    );
+  };
+
   const cluster = layout.cluster;
 
   return (
@@ -326,6 +390,20 @@ const TrusteeTopology: FC = () => {
               <span className={`${PREFIX}__muted`}>
                 {t('Select the Trustee hub, a node, or a workload to open it.')}
               </span>
+              <Button
+                variant="link"
+                isInline
+                icon={<SyncAltIcon />}
+                onClick={refresh}
+                isLoading={spokesLoading}
+              >
+                {t('Refresh remote attestations')}
+              </Button>
+              {fetchedAt && (
+                <span className={`${PREFIX}__muted`}>
+                  {t('updated {{time}}', { time: relativeTime(fetchedAt) })}
+                </span>
+              )}
             </div>
 
             <div className={`${PREFIX}__topo`}>
@@ -432,8 +510,8 @@ const TrusteeTopology: FC = () => {
                   {truncate(cluster.name, 40)}
                 </text>
                 <text x={cluster.x + 14} y={cluster.y + 42} className={`${PREFIX}__topo-subtle`}>
-                  {t('{{count}} confidential workloads', { count: cluster.workloadCount })}
-                  {` · ${t('{{count}} nodes', { count: cluster.nodes.length })}`}
+                  {t('{{num}} confidential workloads', { num: cluster.workloadCount })}
+                  {` · ${t('{{num}} nodes', { num: cluster.nodes.length })}`}
                 </text>
                 <circle
                   cx={cluster.x + cluster.w - 54}
@@ -467,7 +545,8 @@ const TrusteeTopology: FC = () => {
                   </g>
                 ))}
 
-                {/* remote spoke clusters (hub-and-spoke) */}
+                {/* remote spoke clusters — confidential workloads in OTHER clusters
+                    that attested to this Trustee, read live from the KBS log */}
                 <rect
                   x={layout.spoke.x}
                   y={layout.spoke.y}
@@ -478,39 +557,52 @@ const TrusteeTopology: FC = () => {
                 />
                 <text
                   x={layout.spoke.x + 14}
-                  y={layout.spoke.y + 26}
+                  y={layout.spoke.y + 24}
                   className={`${PREFIX}__topo-title`}
                 >
                   {t('Remote spoke clusters')}
                 </text>
                 <text
                   x={layout.spoke.x + 14}
-                  y={layout.spoke.y + 48}
+                  y={layout.spoke.y + 44}
                   className={`${PREFIX}__topo-subtle`}
                 >
-                  {remoteEndpoint
-                    ? t('Confidential workloads in other clusters attest to this Trustee at:')
-                    : t(
-                        'To attest workloads in other clusters, expose kbs-service through a Route:',
-                      )}
+                  {spokesError
+                    ? t('Could not read the KBS log')
+                    : spokes.length > 0
+                      ? t('{{num}} remote source(s) attesting to this Trustee — from the KBS log', {
+                          num: spokes.length,
+                        })
+                      : spokesLoading
+                        ? t('Reading the KBS log…')
+                        : remoteEndpoint
+                          ? t('Confidential workloads in other clusters attest to this Trustee at:')
+                          : t(
+                              'To attest workloads in other clusters, expose kbs-service through a Route:',
+                            )}
                 </text>
-                <text
-                  x={layout.spoke.x + 14}
-                  y={layout.spoke.y + 70}
-                  className={`${PREFIX}__topo-mono`}
-                >
-                  {remoteEndpoint
-                    ? truncate(remoteEndpoint, 44)
-                    : t('no external Route configured yet')}
-                  <title>
-                    {remoteEndpoint || t('No Route targets kbs-service in this namespace')}
-                  </title>
-                </text>
+                {spokes.length > 0 ? (
+                  spokes.map(renderSpoke)
+                ) : (
+                  <text
+                    x={layout.spoke.x + 14}
+                    y={layout.spoke.y + 70}
+                    className={`${PREFIX}__topo-mono`}
+                  >
+                    {spokesError
+                      ? truncate(spokesError, 56)
+                      : remoteEndpoint
+                        ? truncate(remoteEndpoint, 56)
+                        : t('no external Route configured yet')}
+                    <title>
+                      {remoteEndpoint || t('No Route targets kbs-service in this namespace')}
+                    </title>
+                  </text>
+                )}
               </svg>
             </div>
           </>
         )}
-        <RemoteAttestations />
       </PageSection>
     </>
   );

@@ -251,7 +251,12 @@ const GEO = {
   spokeH: 96,
 };
 
-export const layoutTopology = (cluster: TopoCluster): Layout => {
+/** Height of one remote-spoke row in the enlarged spoke box (two text lines). */
+export const SPOKE_ROW_H = 42;
+/** Header height of the spoke box (title + sub-line) when it lists remote sources. */
+const SPOKE_HEADER_H = 56;
+
+export const layoutTopology = (cluster: TopoCluster, spokeRows = 0): Layout => {
   const g = GEO;
   const clusterX = g.pad + g.hubW + g.arrowGap;
   const innerW = g.clusterW - 2 * g.clusterPad; // node-box width
@@ -298,7 +303,10 @@ export const layoutTopology = (cluster: TopoCluster): Layout => {
   };
 
   const spokeY = g.pad + clusterH + g.clusterGap;
-  const spoke = { x: clusterX, y: spokeY, w: g.clusterW, h: g.spokeH, headerH: g.nodeHeaderH };
+  // The spoke box grows to list the remote sources that actually attested (read
+  // from the KBS log); empty, it falls back to the fixed guidance height.
+  const spokeH = spokeRows > 0 ? SPOKE_HEADER_H + spokeRows * SPOKE_ROW_H + g.clusterPad : g.spokeH;
+  const spoke = { x: clusterX, y: spokeY, w: g.clusterW, h: spokeH, headerH: SPOKE_HEADER_H };
 
   const hub: Rect = { x: g.pad, y: g.pad + clusterH / 2 - g.hubH / 2, w: g.hubW, h: g.hubH };
 
@@ -306,12 +314,12 @@ export const layoutTopology = (cluster: TopoCluster): Layout => {
   const hubMidY = hub.y + hub.h / 2;
   const edges: Edge[] = [
     { x1: hubRightX, y1: hubMidY, x2: clusterX, y2: g.pad + clusterH / 2, dashed: false },
-    { x1: hubRightX, y1: hubMidY, x2: clusterX, y2: spokeY + g.spokeH / 2, dashed: true },
+    { x1: hubRightX, y1: hubMidY, x2: clusterX, y2: spokeY + spokeH / 2, dashed: true },
   ];
 
   return {
     width: clusterX + g.clusterW + g.pad,
-    height: spokeY + g.spokeH + g.pad,
+    height: spokeY + spokeH + g.pad,
     hub,
     cluster: laidCluster,
     spoke,
