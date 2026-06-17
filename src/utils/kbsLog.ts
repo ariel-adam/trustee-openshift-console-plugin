@@ -48,7 +48,7 @@ export const parseKbsLog = (text: string): KbsLogEntry[] => {
       const h = HTTP.exec(message);
       const path = h?.[2];
       // Drop everything that isn't a call to the KBS API — that's the scanner noise.
-      if (!path || !path.startsWith('/kbs')) continue;
+      if (!path?.startsWith('/kbs')) continue;
       const status = h ? Number(h[3]) : undefined;
       const kind: LogKind = path.includes('/attest')
         ? 'attest'

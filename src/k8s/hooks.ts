@@ -120,17 +120,16 @@ export const useRemoteAttestations = (
       const byIp = new Map<string, RemoteSpoke>();
       for (const e of parseKbsLog(text)) {
         if ((e.kind !== 'attest' && e.kind !== 'resource') || !isRemoteClient(e.clientIp)) continue;
-        const ip = e.clientIp as string;
-        const s =
-          byIp.get(ip) ??
-          ({
-            clientIp: ip,
-            attests: 0,
-            released: 0,
-            attestOk: false,
-            attestDenied: false,
-            resources: [],
-          } as RemoteSpoke);
+        if (!e.clientIp) continue;
+        const ip = e.clientIp;
+        const s = byIp.get(ip) ?? {
+          clientIp: ip,
+          attests: 0,
+          released: 0,
+          attestOk: false,
+          attestDenied: false,
+          resources: [],
+        };
         if (!s.lastSeen || (e.timestamp ?? '') > s.lastSeen) s.lastSeen = e.timestamp;
         if (e.kind === 'attest') {
           s.attests += 1;

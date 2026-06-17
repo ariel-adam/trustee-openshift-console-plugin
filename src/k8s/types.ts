@@ -12,7 +12,7 @@ export type SecretKind = K8sResourceCommon & {
   type?: string;
 };
 
-export type ContainerStatusKind = {
+export interface ContainerStatusKind {
   name: string;
   ready: boolean;
   restartCount: number;
@@ -22,7 +22,7 @@ export type ContainerStatusKind = {
     terminated?: { exitCode?: number; reason?: string; finishedAt?: string };
   };
   image?: string;
-};
+}
 
 /**
  * Minimal batch/v1 Job shape — the reference-value generator watches the veritas

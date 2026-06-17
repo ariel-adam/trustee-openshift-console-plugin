@@ -250,7 +250,7 @@ const GenerateReferenceValuesModal: FC<Props> = ({
                 verbs: ['get', 'patch', 'update'],
               },
             ],
-          } as ConfigMapKind & { rules: unknown[] },
+          },
         });
       } catch (e) {
         if (!isAlreadyExists(e)) throw e;
@@ -268,7 +268,7 @@ const GenerateReferenceValuesModal: FC<Props> = ({
               name: P,
             },
             subjects: [{ kind: 'ServiceAccount', name: P, namespace }],
-          } as ConfigMapKind & { roleRef: unknown; subjects: unknown[] },
+          },
         });
       } catch (e) {
         if (!isAlreadyExists(e)) throw e;
@@ -328,11 +328,11 @@ const GenerateReferenceValuesModal: FC<Props> = ({
         },
       };
       try {
-        await k8sDelete({ model: JobModel, resource: jobResource as JobKind });
+        await k8sDelete({ model: JobModel, resource: jobResource });
       } catch (e) {
         if (!isNotFound(e)) throw e;
       }
-      await k8sCreate({ model: JobModel, data: jobResource as JobKind });
+      await k8sCreate({ model: JobModel, data: jobResource });
 
       setStarted(true);
     } catch (e) {

@@ -220,7 +220,7 @@ const TrusteeSecretsTab: FC<TrusteeTabProps> = ({ obj }) => {
   }) as [KbsConfigKind[] | undefined, boolean, unknown];
   const kbs =
     (kbsList ?? []).find((k) => k.metadata?.name === `${name}-kbs-config`) ??
-    (kbsList ?? []).find((k) => !!name && (k.metadata?.name ?? '').startsWith(`${name}`));
+    (kbsList ?? []).find((k) => !!name && (k.metadata?.name ?? '').startsWith(name));
 
   const [secretList] = useK8sWatchResource<SecretKind[]>({
     groupVersionKind: SecretGVK,

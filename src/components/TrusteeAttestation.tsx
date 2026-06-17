@@ -324,15 +324,18 @@ const TrusteeAttestation: FC = () => {
   }, [rows]);
 
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
-  const toggle = (id: string) =>
+  const toggle = (id: string) => {
     setExpanded((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
+  };
   const [filter, setFilter] = useState<Verdict | 'all'>('all');
-  const toggleFilter = (v: Verdict) => setFilter((f) => (f === v ? 'all' : v));
+  const toggleFilter = (v: Verdict) => {
+    setFilter((f) => (f === v ? 'all' : v));
+  };
   const visibleRows = filter === 'all' ? rows : rows.filter((r) => r.verdict === filter);
 
   const loading = !tcLoaded || !podsLoaded || !nodesLoaded;
@@ -396,7 +399,9 @@ const TrusteeAttestation: FC = () => {
                 <StatTile
                   value={counts.total}
                   label={t('Confidential workloads')}
-                  onClick={() => setFilter('all')}
+                  onClick={() => {
+                    setFilter('all');
+                  }}
                   active={filter === 'all'}
                 />
               </GridItem>
@@ -404,7 +409,9 @@ const TrusteeAttestation: FC = () => {
                 <StatTile
                   value={counts.healthy}
                   label={t('Healthy')}
-                  onClick={() => toggleFilter('healthy')}
+                  onClick={() => {
+                    toggleFilter('healthy');
+                  }}
                   active={filter === 'healthy'}
                 />
               </GridItem>
@@ -412,7 +419,9 @@ const TrusteeAttestation: FC = () => {
                 <StatTile
                   value={counts.failing}
                   label={t('Failing')}
-                  onClick={() => toggleFilter('failing')}
+                  onClick={() => {
+                    toggleFilter('failing');
+                  }}
                   active={filter === 'failing'}
                 />
               </GridItem>
@@ -420,7 +429,9 @@ const TrusteeAttestation: FC = () => {
                 <StatTile
                   value={counts.noatt}
                   label={t('Not attesting')}
-                  onClick={() => toggleFilter('no-attestation')}
+                  onClick={() => {
+                    toggleFilter('no-attestation');
+                  }}
                   active={filter === 'no-attestation'}
                 />
               </GridItem>
@@ -453,7 +464,9 @@ const TrusteeAttestation: FC = () => {
                         <DataListToggle
                           id={`toggle-${w.uid}`}
                           isExpanded={open}
-                          onClick={() => toggle(w.uid)}
+                          onClick={() => {
+                            toggle(w.uid);
+                          }}
                           aria-label={t('Probe attestation')}
                         />
                         <DataListItemCells

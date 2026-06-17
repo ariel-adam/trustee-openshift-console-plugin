@@ -14,7 +14,7 @@ const SUBTLE: Record<HashAlgo, string> = {
 };
 
 /** Kata Agent policy requests, in the order the doc lists them, with the permissive defaults. */
-export const POLICY_DEFAULTS: ReadonlyArray<readonly [string, boolean]> = [
+export const POLICY_DEFAULTS: readonly (readonly [string, boolean])[] = [
   ['AddARPNeighborsRequest', true],
   ['AddSwapRequest', true],
   ['CloseStdinRequest', true],

@@ -201,7 +201,7 @@ const DeployTrusteeWizard: FC = () => {
             title={t('Trustee is already deployed on this cluster')}
             className="trustee-openshift-console-plugin__mb"
             actionLinks={
-              <Button variant="link" isInline onClick={() => navigate('/trustee')}>
+              <Button variant="link" isInline onClick={() => void navigate('/trustee')}>
                 {t('View existing Trustee')}
               </Button>
             }
@@ -509,7 +509,7 @@ const DeployTrusteeWizard: FC = () => {
                         <Button
                           variant="primary"
                           onClick={() => {
-                            navigate(
+                            void navigate(
                               `/k8s/ns/${createdRef.namespace}/${TrusteeConfigModelRef}/${createdRef.name}`,
                             );
                           }}
@@ -519,7 +519,7 @@ const DeployTrusteeWizard: FC = () => {
                         <Button
                           variant="link"
                           onClick={() => {
-                            navigate('/trustee');
+                            void navigate('/trustee');
                           }}
                         >
                           {t('Go to attestation overview')}
@@ -538,7 +538,7 @@ const DeployTrusteeWizard: FC = () => {
                         <Button
                           variant="link"
                           onClick={() => {
-                            navigate('/trustee');
+                            void navigate('/trustee');
                           }}
                         >
                           {t('Cancel')}

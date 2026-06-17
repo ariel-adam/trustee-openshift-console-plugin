@@ -33,14 +33,14 @@ const DNS_1123 = /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/;
 const isNotFound = (e: unknown): boolean =>
   /not found|notfound|404/i.test(e instanceof Error ? e.message : String(e));
 
-type Props = {
+interface Props {
   trusteeConfigName: string;
   namespace: string;
   ingressDomain?: string;
   defaultSecretName?: string;
   onCreated: (secretName: string) => void;
   onClose: () => void;
-};
+}
 
 /**
  * The in-cluster Job: openssl generates a self-signed cert+key, then curl
@@ -187,11 +187,11 @@ const GenerateTlsSecretModal: FC<Props> = ({
         },
       };
       try {
-        await k8sDelete({ model: JobModel, resource: jobResource as JobKind });
+        await k8sDelete({ model: JobModel, resource: jobResource });
       } catch (e) {
         if (!isNotFound(e)) throw e;
       }
-      await k8sCreate({ model: JobModel, data: jobResource as JobKind });
+      await k8sCreate({ model: JobModel, data: jobResource });
       setStarted(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
