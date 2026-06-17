@@ -128,7 +128,7 @@ const TrusteeTopology: FC = () => {
   const hubNs =
     primaryTc?.metadata?.namespace ?? kbsConfigs[0]?.metadata?.namespace ?? TRUSTEE_NAMESPACE;
   const hubReady = isReady(primaryTc) || (kbsConfigs[0]?.status?.isReady ?? false);
-  const kbsEndpoint = `${KBS_SERVICE_NAME}.${hubNs}:${KBS_SERVICE_PORT}`;
+  const kbsEndpoint = `${KBS_SERVICE_NAME}.${hubNs}.svc:${KBS_SERVICE_PORT}`;
 
   // Decode each confidential pod's initdata KBS URL so the topology shows which
   // Trustee each workload ACTUALLY attests to (this one vs a remote hub) — not
