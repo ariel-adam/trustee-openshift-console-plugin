@@ -93,10 +93,12 @@ const TrusteeInitdataTab: FC<TrusteeTabProps> = ({ obj }) => {
   );
   const externalUrl = kbsRoute?.spec?.host ? `https://${kbsRoute.spec.host}` : undefined;
   const routeIsEdge = kbsRoute?.spec?.tls?.termination === 'edge';
-  // Use the fully-qualified `.svc` host so it matches the KBS TLS cert's CN/SAN
-  // (GenerateTlsSecretModal issues the cert for `kbs-service.<ns>.svc`). Without
-  // `.svc` the in-guest CDH rejects the TLS handshake on a hostname mismatch.
-  const inClusterUrl = `${httpsSecretName ? 'https' : 'http'}://${KBS_SERVICE_NAME}.${namespace}.svc:${KBS_SERVICE_PORT}`;
+  // In-cluster KBS endpoint is HTTP: the trustee-operator's KBS serves plain HTTP by default
+  // (insecure_http=true), and the in-guest CDH (rustls) rejects the operator's self-signed
+  // HTTPS cert outright (no hostname/CA leeway), so HTTPS to the in-cluster Service does not
+  // work. `.svc` is the fully-qualified Service host (also matches the cert CN/SAN should you
+  // later front the KBS with a CDH-trusted HTTPS cert). The field stays editable for that case.
+  const inClusterUrl = `http://${KBS_SERVICE_NAME}.${namespace}.svc:${KBS_SERVICE_PORT}`;
 
   // --- cert auto-fill from the HTTPS secret (passthrough route / in-cluster TLS) ---
   const [httpsSecret] = useK8sWatchResource<SecretKind>(
