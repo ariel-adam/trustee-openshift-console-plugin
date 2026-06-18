@@ -5,6 +5,7 @@ import prettier from 'eslint-plugin-prettier/recommended';
 import reactHooks from 'eslint-plugin-react-hooks';
 import importX from 'eslint-plugin-import-x';
 import { createTypeScriptImportResolver } from 'eslint-import-resolver-typescript';
+import jest from 'eslint-plugin-jest';
 import globals from 'globals';
 
 export default tseslint.config(
@@ -65,6 +66,26 @@ export default tseslint.config(
       // The codebase intentionally uses `str || fallback` to treat '' like missing
       // (namespace/name defaults); allow that, keep ?? enforcement for numbers.
       '@typescript-eslint/prefer-nullish-coalescing': ['error', { ignorePrimitives: { string: true } }],
+    },
+  },
+  {
+    // Jest unit tests for pure helpers (src/**/*.spec.ts).
+    files: ['src/**/*.spec.{ts,tsx}'],
+    plugins: {
+      ...jest.configs['flat/recommended'].plugins,
+      ...jest.configs['flat/style'].plugins,
+    },
+    languageOptions: {
+      ...jest.configs['flat/recommended'].languageOptions,
+      ...jest.configs['flat/style'].languageOptions,
+      globals: {
+        ...jest.configs['flat/recommended'].languageOptions?.globals,
+        ...globals.node,
+      },
+    },
+    rules: {
+      ...jest.configs['flat/recommended'].rules,
+      ...jest.configs['flat/style'].rules,
     },
   },
   prettier,
