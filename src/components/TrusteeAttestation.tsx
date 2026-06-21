@@ -368,9 +368,11 @@ const TrusteeAttestation: FC = () => {
     return m;
   }, [evidenceCms]);
 
+  const permissiveMode = !primaryTc?.spec?.profileType || primaryTc.spec.profileType === 'Permissive';
+
   const ctx: AttestContext = useMemo(
-    () => ({ kbsReady, referenceValuesPresent: refPresent }),
-    [kbsReady, refPresent],
+    () => ({ kbsReady, referenceValuesPresent: refPresent, permissiveMode }),
+    [kbsReady, refPresent, permissiveMode],
   );
   const workloads = useMemo(() => buildAttestWorkloads(pods ?? [], nodes ?? []), [pods, nodes]);
   const rows = useMemo(
@@ -448,7 +450,20 @@ const TrusteeAttestation: FC = () => {
                 <Link to={healthPath}>{t('Check Trustee health')}</Link>
               </Alert>
             )}
-            {kbsReady && !refPresent && (
+            {kbsReady && !refPresent && permissiveMode && (
+              <Alert
+                variant="info"
+                isInline
+                title={t('Trustee is running in permissive mode (dev/test)')}
+                className={`${PREFIX}__mb`}
+              >
+                {t(
+                  'No attestation reference values are registered. Trustee is in permissive mode \u2014 all TEE measurements are accepted. For production, switch to Restricted profile and register reference values.',
+                )}{' '}
+                <Link to={refValuesPath}>{t('Open reference values')}</Link>
+              </Alert>
+            )}
+            {kbsReady && !refPresent && !permissiveMode && (
               <Alert
                 variant="warning"
                 isInline
@@ -456,7 +471,7 @@ const TrusteeAttestation: FC = () => {
                 className={`${PREFIX}__mb`}
               >
                 {t(
-                  'Trustee rejects attestation until reference values (RVPS) are registered. Generate them from a TrusteeConfig, or add the PCR8 a workload’s initdata produces.',
+                  'Trustee rejects attestation until reference values (RVPS) are registered. Generate them from a TrusteeConfig, or add the PCR8 a workload\u2019s initdata produces.',
                 )}{' '}
                 <Link to={refValuesPath}>{t('Open reference values')}</Link>
               </Alert>
