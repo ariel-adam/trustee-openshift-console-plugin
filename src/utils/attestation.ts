@@ -27,6 +27,13 @@ export interface AttestWorkload {
   runtime: string;
   gpu: boolean;
   hasInitData: boolean;
+  /**
+   * True for `kata-remote` pods where the backing Azure VM is a Confidential VM
+   * (peer-pods-cm.DISABLECVM !== "true"). These pods always run inside a hardware
+   * TEE; the AA inside the CVM performs attestation automatically without needing
+   * an explicit `cc_init_data` annotation on the pod.
+   */
+  isCvmPeerPod: boolean;
   phase: string;
   ready: boolean;
   containerIssue?: string;
@@ -89,12 +96,13 @@ export const buildAttestWorkloads = (pods: PodKind[], nodes: NodeKind[]): Attest
     if (nm) nodeByName.set(nm, n);
   });
   return pods
-    .filter((p) => isConfidentialRuntimeName(p.spec?.runtimeClassName))
+    .filter((p) => isConfidentialRuntimeName(p.spec?.runtimeClassName, cvmPeerPodsEnabled))
     .map((p) => {
       const nodeName = p.spec?.nodeName ?? '';
       const nodeObj = nodeName ? nodeByName.get(nodeName) : undefined;
       const tee = teeTypeForNode(nodeObj);
       const runtime = p.spec?.runtimeClassName ?? '';
+      const isCvmPeerPod = runtime === 'kata-remote' && cvmPeerPodsEnabled;
       return {
         uid: p.metadata?.uid ?? `${p.metadata?.namespace ?? ''}/${p.metadata?.name ?? ''}`,
         name: p.metadata?.name ?? '',
@@ -102,12 +110,19 @@ export const buildAttestWorkloads = (pods: PodKind[], nodes: NodeKind[]): Attest
         nodeName,
         runtime,
         gpu: runtime.includes('gpu'),
-        hasInitData: Boolean(p.metadata?.annotations?.[CC_INIT_DATA_ANNOTATION]),
+        // CVM peer-pods run the Attestation Agent inside the CVM's kernel; they
+        // attest automatically without an explicit cc_init_data annotation on the
+        // pod object (the CAA passes global initdata to the VM at creation time).
+        hasInitData:
+          Boolean(p.metadata?.annotations?.[CC_INIT_DATA_ANNOTATION]) || isCvmPeerPod,
+        isCvmPeerPod,
         phase: p.status?.phase ?? 'Unknown',
         ready: allReady(p),
         containerIssue: containerIssue(p),
         tee,
-        onTeeNode: tee !== 'none',
+        // CVM peer-pods always run inside a hardware TEE (Azure Confidential VM)
+        // even though they don't show a TEE-flavoured node label on the host node.
+        onTeeNode: tee !== 'none' || isCvmPeerPod,
         nodeKnown: Boolean(nodeObj),
       };
     })
