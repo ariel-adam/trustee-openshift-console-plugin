@@ -61,8 +61,22 @@ export interface TopoCluster {
  * A CoCo workload runs on the kata-cc family (bare-metal TEE) OR kata-remote
  * (cloud peer-pod). Both are shown in the attestation view.
  */
-export const isConfidentialRuntimeName = (name?: string): boolean =>
-  !!name && (name.startsWith('kata-cc') || name === 'kata-remote');
+/**
+ * Is this runtime class name a confidential-containers runtime?
+ *
+ * - `kata-cc*` — always confidential (bare-metal TEE: TDX/SEV-SNP)
+ * - `kata-remote` — confidential ONLY when `cvmPeerPodsEnabled` is true,
+ *   meaning the peer-pod VMs are actually Confidential VMs (DISABLECVM=false
+ *   in peer-pods-cm). When DISABLECVM=true the peer-pod VMs are standard
+ *   (non-CVM) Azure VMs and are NOT confidential.
+ *
+ * Pass `cvmPeerPodsEnabled=true` when `peer-pods-cm.DISABLECVM !== "true"`.
+ */
+export const isConfidentialRuntimeName = (
+  name?: string,
+  cvmPeerPodsEnabled = false,
+): boolean =>
+  !!name && (name.startsWith('kata-cc') || (name === 'kata-remote' && cvmPeerPodsEnabled));
 
 export const teeTypeForNode = (node?: NodeKind): TeeType => {
   const labels = node?.metadata?.labels ?? {};

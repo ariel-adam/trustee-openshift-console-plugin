@@ -88,8 +88,16 @@ const containerIssue = (pod: PodKind): string | undefined => {
   return undefined;
 };
 
-/** Confidential (kata-cc*) pods, normalized for the attestation view. */
-export const buildAttestWorkloads = (pods: PodKind[], nodes: NodeKind[]): AttestWorkload[] => {
+/**
+ * Confidential pods, normalized for the attestation view.
+ * `cvmPeerPodsEnabled` — pass true when kata-remote workloads are backed by
+ * actual Confidential VMs (peer-pods-cm.DISABLECVM !== "true").
+ */
+export const buildAttestWorkloads = (
+  pods: PodKind[],
+  nodes: NodeKind[],
+  cvmPeerPodsEnabled = false,
+): AttestWorkload[] => {
   const nodeByName = new Map<string, NodeKind>();
   nodes.forEach((n) => {
     const nm = n.metadata?.name;
