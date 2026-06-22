@@ -29,6 +29,7 @@ import {
 } from '../k8s/hooks';
 import {
   CC_INIT_DATA_ANNOTATION,
+  ConfigMapGVK,
   InfrastructureGVK,
   KBS_SERVICE_NAME,
   KBS_SERVICE_PORT,
@@ -38,6 +39,7 @@ import {
   TRUSTEE_NAMESPACE,
 } from '../k8s/resources';
 import type {
+  ConfigMapKind,
   InfrastructureKind,
   NodeKind,
   PodKind,
@@ -114,6 +116,14 @@ const TrusteeTopology: FC = () => {
     groupVersionKind: NodeGVK,
     isList: true,
   });
+  const [peerPodsCm, ppLoaded, ppLoadError] = useK8sWatchResource<ConfigMapKind>({
+    groupVersionKind: ConfigMapGVK,
+    namespace: 'openshift-sandboxed-containers-operator',
+    name: 'peer-pods-cm',
+  });
+  const cvmPeerPodsEnabled =
+    (ppLoaded || Boolean(ppLoadError)) &&
+    peerPodsCm?.data?.DISABLECVM !== 'true';
   const [infra] = useK8sWatchResource<InfrastructureKind[]>({
     groupVersionKind: InfrastructureGVK,
     isList: true,
@@ -137,7 +147,7 @@ const TrusteeTopology: FC = () => {
     void (async () => {
       const next = new Map<string, AttestInfo>();
       for (const p of pods ?? []) {
-        if (!isConfidentialRuntimeName(p.spec?.runtimeClassName)) continue;
+        if (!isConfidentialRuntimeName(p.spec?.runtimeClassName, cvmPeerPodsEnabled)) continue;
         const ann = p.metadata?.annotations?.[CC_INIT_DATA_ANNOTATION];
         if (!ann) continue;
         const uid = p.metadata?.uid ?? `${p.metadata?.namespace ?? ''}/${p.metadata?.name ?? ''}`;

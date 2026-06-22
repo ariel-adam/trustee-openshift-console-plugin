@@ -325,6 +325,18 @@ const TrusteeAttestation: FC = () => {
     groupVersionKind: NodeGVK,
     isList: true,
   });
+  // Detect whether kata-remote peer-pod workloads are backed by actual CVMs.
+  // PEER_PODS lives in osc-feature-gates; DISABLECVM lives in peer-pods-cm.
+  // When DISABLECVM=false the backing Azure VMs are Confidential VMs with
+  // hardware TEE — the AA inside attests automatically, so we count them.
+  const [peerPodsCm, ppLoaded, ppLoadError] = useK8sWatchResource<ConfigMapKind>({
+    groupVersionKind: ConfigMapGVK,
+    namespace: 'openshift-sandboxed-containers-operator',
+    name: 'peer-pods-cm',
+  });
+  const cvmPeerPodsEnabled =
+    (ppLoaded || Boolean(ppLoadError)) &&
+    peerPodsCm?.data?.DISABLECVM !== 'true';
   const primaryTc = useMemo(
     () => trusteeConfigs.find((tc) => isReady(tc)) ?? trusteeConfigs[0],
     [trusteeConfigs],
@@ -374,7 +386,10 @@ const TrusteeAttestation: FC = () => {
     () => ({ kbsReady, referenceValuesPresent: refPresent, permissiveMode }),
     [kbsReady, refPresent, permissiveMode],
   );
-  const workloads = useMemo(() => buildAttestWorkloads(pods ?? [], nodes ?? []), [pods, nodes]);
+  const workloads = useMemo(
+    () => buildAttestWorkloads(pods ?? [], nodes ?? [], cvmPeerPodsEnabled),
+    [pods, nodes, cvmPeerPodsEnabled],
+  );
   const rows = useMemo(
     () => workloads.map((w) => ({ w, verdict: baselineVerdict(w, ctx) })),
     [workloads, ctx],
